@@ -1,0 +1,916 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Type-dash // Professional Typing Arena</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        :root[data-theme="dark"] {
+            --bg-color: #0b0d19;
+            --panel-bg: #151828;
+            --main-color: #00f0ff;
+            --caret-color: #00f0ff;
+            --sub-color: #7987a1;
+            --sub-alt-color: #0b0d19;
+            --text-color: #e2e8f0;
+            --error-color: #ff3b69;
+            --error-bg: rgba(255, 59, 105, 0.15);
+            --correct-color: #00ffaa;
+            --modal-overlay: rgba(0, 0, 0, 0.75);
+        }
+
+        :root[data-theme="light"] {
+            --bg-color: #f4f6fa;
+            --panel-bg: #ffffff;
+            --main-color: #6366f1;
+            --caret-color: #6366f1;
+            --sub-color: #8e9aa8;
+            --sub-alt-color: #f4f6fa;
+            --text-color: #1e293b;
+            --error-color: #ef4444;
+            --error-bg: rgba(239, 68, 68, 0.1);
+            --correct-color: #10b981;
+            --modal-overlay: rgba(15, 23, 42, 0.6);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Courier New', Courier, monospace;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            overflow-x: hidden;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        /* Welcome Splash Screen */
+        #welcome-screen {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: var(--bg-color);
+            z-index: 9999;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            transition: transform 0.5s cubic-bezier(0.77, 0, 0.175, 1), opacity 0.5s;
+        }
+
+        #welcome-screen.hidden {
+            transform: translateY(-100%);
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .welcome-card {
+            background: var(--panel-bg);
+            padding: 45px 35px;
+            border-radius: 20px;
+            box-shadow: 0 25px 60px rgba(0,0,0,0.4);
+            max-width: 450px;
+            width: 100%;
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.03);
+        }
+
+        .app-title {
+            font-size: 3.2rem;
+            font-weight: 900;
+            color: var(--main-color);
+            margin-bottom: 5px;
+            letter-spacing: -1px;
+        }
+
+        .developer-credit {
+            font-size: 1rem;
+            color: var(--sub-color);
+            margin-bottom: 35px;
+            line-height: 1.6;
+        }
+
+        .developer-credit span { color: var(--text-color); font-weight: bold; }
+
+        .btn-action {
+            background: var(--main-color);
+            color: var(--sub-alt-color);
+            border: none;
+            padding: 15px 35px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: opacity 0.2s, transform 0.1s;
+        }
+        .btn-action:active { transform: scale(0.98); }
+        .btn-action:hover { opacity: 0.9; }
+
+        /* Configuration Selector Modals */
+        .modal-layer {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: var(--modal-overlay);
+            backdrop-filter: blur(4px);
+            z-index: 9000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+        .modal-layer.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .modal-window {
+            background: var(--panel-bg);
+            padding: 30px;
+            border-radius: 16px;
+            max-width: 400px;
+            width: 100%;
+            text-align: center;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+        }
+        .modal-window h3 {
+            margin-bottom: 20px;
+            font-size: 1.2rem;
+            color: var(--main-color);
+        }
+        .time-picker-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        .btn-time-select, .btn-difficulty-select {
+            background: var(--bg-color);
+            border: 1px solid rgba(255,255,255,0.05);
+            color: var(--text-color);
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-time-select:hover, .btn-difficulty-select:hover {
+            border-color: var(--main-color);
+            color: var(--main-color);
+        }
+
+        /* Core Structure */
+        .app-content {
+            width: 100%;
+            max-width: 1100px;
+            padding: 40px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: opacity 0.5s, transform 0.5s;
+        }
+        .app-content.visible { opacity: 1; transform: translateY(0); }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .brand-logo {
+            font-size: 1.4rem;
+            font-weight: bold;
+            color: var(--main-color);
+            letter-spacing: -0.5px;
+        }
+
+        .controls-row {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        /* Stats */
+        .live-stats { display: flex; gap: 20px; width: 100%; flex-wrap: wrap; }
+        .stat-node {
+            background: var(--panel-bg); padding: 15px 20px; border-radius: 12px;
+            flex: 1; min-width: 220px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+        .stat-label { font-size: 0.8rem; color: var(--sub-color); text-transform: uppercase; }
+        .stat-val { font-size: 1.8rem; color: var(--main-color); font-weight: bold; margin-top: 5px; }
+
+        /* Typing Panel */
+        .typing-panel-outer {
+            position: relative;
+            background-color: var(--panel-bg);
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            cursor: text;
+        }
+
+        .typing-container {
+            position: relative; 
+            width: 100%; 
+            height: 140px;
+            overflow: hidden; 
+            font-size: 1.65rem; 
+            line-height: 2.6rem;
+            word-break: break-word; 
+            user-select: none; 
+            outline: none;
+        }
+
+        #hidden-input { 
+            position: absolute; 
+            top: 0; left: 0; width: 100%; height: 100%;
+            opacity: 0; 
+            z-index: 5; 
+            cursor: text;
+        }
+        
+        .words-wrapper { position: relative; top: 0; color: var(--sub-color); transition: top 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94); z-index: 1; }
+        .word { display: inline-block; margin-right: 14px; white-space: nowrap; }
+        
+        .letter { 
+            position: relative; 
+            color: var(--sub-color); 
+            transition: color 0.1s ease, background-color 0.1s ease;
+            border-radius: 3px;
+        }
+        .letter.correct { 
+            color: var(--text-color); 
+        }
+        .letter.incorrect { 
+            color: var(--error-color); 
+            background-color: var(--error-bg);
+            border-bottom: 2px solid var(--error-color); 
+        }
+
+        .letter.current::before {
+            content: ''; 
+            position: absolute; 
+            left: -1px; 
+            top: 10%;
+            height: 80%; 
+            width: 2.5px; 
+            background-color: var(--caret-color);
+            animation: caretBlink 0.9s infinite;
+            box-shadow: 0 0 8px var(--caret-color);
+        }
+        @keyframes caretBlink { 50% { opacity: 0; } }
+
+        .focus-error {
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(11,13,25,0.92); backdrop-filter: blur(5px);
+            display: flex; justify-content: center; align-items: center;
+            color: #fff; font-size: 1.1rem; border-radius: 16px;
+            opacity: 0; pointer-events: none; z-index: 10; transition: opacity 0.2s;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .typing-panel-outer.test-running:not(:focus-within) .focus-error { 
+            opacity: 1; 
+            pointer-events: auto; 
+        }
+
+        .action-button-group {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+
+        .btn-secondary {
+            background: var(--panel-bg);
+            border: 1px solid rgba(255,255,255,0.05);
+            color: var(--sub-color);
+            padding: 15px 30px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+        .btn-secondary:hover {
+            background: var(--sub-color);
+            color: var(--bg-color);
+        }
+
+        .btn-secondary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Charts */
+        .charts-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            width: 100%;
+            margin-top: 10px;
+            display: none;
+        }
+        .charts-container.visible { display: grid; }
+
+        .chart-panel { 
+            background-color: var(--panel-bg); 
+            border-radius: 16px; 
+            padding: 20px; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        .chart-title { 
+            font-size: 0.8rem; 
+            color: var(--sub-color); 
+            margin-bottom: 15px; 
+            text-transform: uppercase; 
+            font-weight: bold; 
+            letter-spacing: 0.5px; 
+        }
+        .chart-box { 
+            position: relative; 
+            height: 250px; 
+            width: 100%; 
+        }
+
+        /* Results */
+        .results-panel {
+            background-color: var(--panel-bg);
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            display: none;
+        }
+        .results-panel.visible { display: block; }
+
+        .results-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .result-item {
+            text-align: center;
+        }
+
+        .result-label {
+            font-size: 0.9rem;
+            color: var(--sub-color);
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+
+        .result-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--main-color);
+        }
+
+        footer { 
+            margin-top: auto; 
+            padding: 40px 20px; 
+            text-align: center; 
+            color: var(--sub-color); 
+            font-size: 0.85rem; 
+            width: 100%; 
+        }
+        .footer-links { 
+            margin-top: 10px; 
+            display: flex; 
+            justify-content: center; 
+            gap: 20px; 
+            flex-wrap: wrap; 
+        }
+        .footer-links a { 
+            color: var(--text-color); 
+            text-decoration: none; 
+            border-bottom: 1px solid transparent; 
+        }
+        .footer-links a:hover { 
+            border-color: var(--main-color); 
+            color: var(--main-color); 
+        }
+
+        @media (max-width: 768px) {
+            .app-title { font-size: 2.4rem; }
+            .typing-container { font-size: 1.25rem; line-height: 2.2rem; height: 115px; }
+            .word { margin-right: 8px; }
+            .stat-node { min-width: 100%; padding: 12px 15px; }
+            .stat-val { font-size: 1.5rem; }
+            .charts-container.visible { grid-template-columns: 1fr; }
+            .results-grid { grid-template-columns: 1fr; }
+            .btn-action, .btn-secondary { padding: 12px 20px; font-size: 0.95rem; width: 100%; text-align: center; }
+            .action-button-group { flex-direction: column; width: 100%; gap: 10px; }
+            .focus-error { display: none !important; }
+            .time-picker-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="welcome-screen">
+        <div class="welcome-card">
+            <div class="app-title">Type-dash</div>
+            <div class="developer-credit">Engineered and Developed by<br><span>Panth Shah</span></div>
+            <button class="btn-action" style="width: 100%; max-width: 280px;" id="btn-login-start">Get Started</button>
+        </div>
+    </div>
+
+    <div class="modal-layer" id="difficulty-modal">
+        <div class="modal-window">
+            <h3>Select Difficulty Level</h3>
+            <div class="time-picker-grid">
+                <button class="btn-difficulty-select" data-difficulty="easy">Easy</button>
+                <button class="btn-difficulty-select" data-difficulty="medium">Medium</button>
+                <button class="btn-difficulty-select" data-difficulty="hard">Hard</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-layer" id="config-modal">
+        <div class="modal-window">
+            <h3>Select Test Duration</h3>
+            <div class="time-picker-grid">
+                <button class="btn-time-select" data-sec="15">15 Sec</button>
+                <button class="btn-time-select" data-sec="30">30 Sec</button>
+                <button class="btn-time-select" data-sec="60">1 Min</button>
+                <button class="btn-time-select" data-sec="120">2 Min</button>
+                <button class="btn-time-select" data-sec="300">5 Min</button>
+                <button class="btn-time-select" data-sec="600">10 Min</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="app-content" id="app-main-wrapper">
+        <div class="header">
+            <div class="brand-logo">Type-dash //</div>
+            <div class="controls-row">
+                <button class="btn-secondary" id="theme-toggle" style="padding: 6px 14px; font-size: 0.85rem; border-radius: 8px;">🌓 Theme</button>
+            </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 25px; width: 100%;">
+            <div class="live-stats">
+                <div class="stat-node"><div class="stat-label">Remaining Time</div><div class="stat-val" id="live-timer">--</div></div>
+                <div class="stat-node"><div class="stat-label">WPM (Words Per Minute)</div><div class="stat-val" id="live-wpm">0</div></div>
+                <div class="stat-node"><div class="stat-label">Accuracy</div><div class="stat-val" id="live-accuracy">100%</div></div>
+            </div>
+
+            <div class="typing-panel-outer" id="typing-panel-container" tabindex="0">
+                <div class="focus-error" id="focus-error-message">Click here to resume focus and type!</div>
+                <div class="typing-container" id="text-container">
+                    <div class="words-wrapper" id="words-stage" style="color: var(--sub-color); opacity: 0.4;">
+                        [Click "Start Test" below to choose difficulty and duration]
+                    </div>
+                </div>
+                <input type="text" id="hidden-input" autocomplete="off" autocapitalize="off" disabled>
+            </div>
+
+            <div class="action-button-group">
+                <button class="btn-action" id="btn-master-start">Start Test</button>
+                <button class="btn-secondary" id="btn-master-restart">Restart Test</button>
+                <button class="btn-secondary" id="btn-toggle-charts">📈 Show/Hide Charts</button>
+            </div>
+
+            <div class="charts-container" id="charts-container">
+                <div class="chart-panel">
+                    <div class="chart-title">Speed Progress (WPM)</div>
+                    <div class="chart-box">
+                        <canvas id="speedChart"></canvas>
+                    </div>
+                </div>
+                <div class="chart-panel">
+                    <div class="chart-title">Accuracy Breakdown</div>
+                    <div class="chart-box">
+                        <canvas id="accuracyChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="results-panel" id="results-panel">
+                <h2 style="color: var(--main-color); text-align: center; margin-bottom: 20px;">✓ Test Results</h2>
+                <div class="results-grid">
+                    <div class="result-item">
+                        <div class="result-label">Final WPM</div>
+                        <div class="result-value" id="final-wpm">0</div>
+                    </div>
+                    <div class="result-item">
+                        <div class="result-label">Accuracy</div>
+                        <div class="result-value" id="final-accuracy">100%</div>
+                    </div>
+                    <div class="result-item">
+                        <div class="result-label">Total Keys</div>
+                        <div class="result-value" id="final-keys">0</div>
+                    </div>
+                    <div class="result-item">
+                        <div class="result-label">Errors</div>
+                        <div class="result-value" id="final-errors">0</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <p>Engineered and Developed by <span style="color: var(--main-color); font-weight: bold;">Panth Shah</span></p>
+            <div class="footer-links">
+                <a href="https://www.linkedin.com/in/panth-shah-445144389" target="_blank" rel="noopener noreferrer">LinkedIn</a>
+                <a href="https://github.com/PanthShah2007" target="_blank" rel="noopener noreferrer">GitHub</a>
+                <a href="mailto:panthshah2007@gmail.com">Gmail</a>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        const dictionaries = {
+            easy: ["the", "be", "to", "of", "and", "a", "in", "that", "have", "i", "it", "for", "not", "on", "with", "he", "as", "you", "do", "at", "this", "but", "his", "by", "from", "they", "we", "say", "her", "she", "or", "an", "will", "my", "one", "all", "would", "there", "their", "what", "so", "up", "out", "if", "about", "who", "get", "which", "go", "me", "when", "make", "can", "like", "time", "no", "just", "him", "know", "take", "see", "way", "use", "how", "new", "now", "first", "two", "day", "come", "back", "well", "good", "only"],
+            medium: ["environment", "system", "performance", "accuracy", "dashboard", "developer", "intelligence", "generation", "continuous", "algorithm", "structure", "database", "interface", "framework", "application", "optimization", "implementation", "architecture", "component", "technology", "solution", "analysis", "testing", "debugging", "deployment", "repository", "documentation", "configuration", "integration", "validation", "simulation", "execution", "operation", "maintenance", "security", "efficiency", "reliability", "scalability", "compatibility", "persistence", "transaction", "encryption", "authentication", "authorization", "navigation", "pagination", "animation", "responsive", "adaptive", "modular", "dynamic"],
+            hard: ["asynchronous", "polymorphism", "encapsulation", "abstraction", "inheritance", "middleware", "serialization", "deserialization", "containerization", "orchestration", "virtualization", "parallelization", "optimization", "refactoring", "benchmarking", "profiling", "debugging", "compilation", "transpilation", "obfuscation", "cryptography", "authentication", "authorization", "compression", "decompression", "indexing", "normalization", "denormalization", "sharding", "replication", "synchronization", "consistency", "availability", "partition", "latency", "throughput", "scalability", "redundancy", "failover", "clustering", "load-balancing", "caching", "memoization", "pagination", "throttling", "debouncing", "idempotency", "atomicity", "durability", "isolation"]
+        };
+
+        let currentDifficulty = 'easy';
+        let testDuration = 60;
+        let timeLeft = testDuration;
+        let timerInterval = null;
+        let isRunning = false;
+
+        let flatTextArray = []; 
+        let globalCharIndex = 0;
+        let totalKeystrokes = 0;
+        let incorrectKeystrokes = 0;
+
+        let wpmHistory = [];
+        let speedChart = null;
+        let accuracyChart = null;
+
+        const welcomeScreen = document.getElementById('welcome-screen');
+        const btnLoginStart = document.getElementById('btn-login-start');
+        const appMainWrapper = document.getElementById('app-main-wrapper');
+        
+        const difficultyModal = document.getElementById('difficulty-modal');
+        const configModal = document.getElementById('config-modal');
+        const btnMasterStart = document.getElementById('btn-master-start');
+        const btnMasterRestart = document.getElementById('btn-master-restart');
+        const btnToggleCharts = document.getElementById('btn-toggle-charts');
+        
+        const typingPanelContainer = document.getElementById('typing-panel-container');
+        const wordsStage = document.getElementById('words-stage');
+        const hiddenInput = document.getElementById('hidden-input');
+        const liveTimer = document.getElementById('live-timer');
+        const liveWpm = document.getElementById('live-wpm');
+        const liveAcc = document.getElementById('live-accuracy');
+        const chartsContainer = document.getElementById('charts-container');
+        const resultsPanel = document.getElementById('results-panel');
+
+        btnLoginStart.addEventListener('click', () => {
+            welcomeScreen.classList.add('hidden');
+            appMainWrapper.classList.add('visible');
+            initCharts(); 
+        });
+
+        const themeToggle = document.getElementById('theme-toggle');
+        themeToggle.addEventListener('click', () => {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            const targetTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', targetTheme);
+            if (speedChart && accuracyChart) {
+                setTimeout(() => {
+                    speedChart.destroy();
+                    accuracyChart.destroy();
+                    initCharts();
+                }, 100);
+            }
+        });
+
+        btnToggleCharts.addEventListener('click', () => {
+            chartsContainer.classList.toggle('visible');
+            if(chartsContainer.classList.contains('visible')) {
+                setTimeout(() => {
+                    if (speedChart) speedChart.resize();
+                    if (accuracyChart) accuracyChart.resize();
+                }, 100);
+            }
+        });
+
+        btnMasterStart.addEventListener('click', () => {
+            if (isRunning) return;
+            difficultyModal.classList.add('active');
+        });
+
+        btnMasterRestart.addEventListener('click', () => {
+            clearInterval(timerInterval);
+            isRunning = false;
+            typingPanelContainer.classList.remove('test-running');
+            chartsContainer.classList.remove('visible');
+            resultsPanel.classList.remove('visible');
+            difficultyModal.classList.add('active');
+        });
+
+        difficultyModal.addEventListener('click', (e) => {
+            if (e.target.classList.contains('btn-difficulty-select')) {
+                currentDifficulty = e.target.getAttribute('data-difficulty');
+                difficultyModal.classList.remove('active');
+                configModal.classList.add('active');
+            }
+        });
+
+        configModal.addEventListener('click', (e) => {
+            if (e.target.classList.contains('btn-time-select')) {
+                testDuration = parseInt(e.target.getAttribute('data-sec'));
+                configModal.classList.remove('active');
+                executeArenaInitialization();
+            }
+        });
+
+        typingPanelContainer.addEventListener('click', () => {
+            if (isRunning) hiddenInput.focus();
+        });
+
+        function buildTextDataset(wordCount = 60) {
+            let trackingDomString = '';
+            const dictionary = dictionaries[currentDifficulty];
+            
+            for (let i = 0; i < wordCount; i++) {
+                let pickedWord = dictionary[Math.floor(Math.random() * dictionary.length)];
+                trackingDomString += `<div class="word">`;
+                for (let j = 0; j < pickedWord.length; j++) {
+                    trackingDomString += `<span class="letter">${pickedWord[j]}</span>`;
+                    flatTextArray.push({ char: pickedWord[j], state: 'neutral' });
+                }
+                trackingDomString += `<span class="letter whitespace">&nbsp;</span></div>`;
+                flatTextArray.push({ char: ' ', state: 'neutral' });
+            }
+            return trackingDomString;
+        }
+
+        function appendDynamicBuffer() {
+            const tempBox = document.createElement('div');
+            tempBox.innerHTML = buildTextDataset(40);
+            while (tempBox.firstChild) {
+                wordsStage.appendChild(tempBox.firstChild);
+            }
+        }
+
+        function executeArenaInitialization() {
+            timeLeft = testDuration;
+            globalCharIndex = 0;
+            totalKeystrokes = 0;
+            incorrectKeystrokes = 0;
+            flatTextArray = [];
+            wpmHistory = [];
+
+            liveTimer.textContent = timeLeft;
+            liveWpm.textContent = '0';
+            liveAcc.textContent = '100%';
+            hiddenInput.value = '';
+            wordsStage.style.top = '0px';
+            wordsStage.style.opacity = '1';
+
+            wordsStage.innerHTML = buildTextDataset(60);
+            
+            rebindDOMCursor();
+            initCharts();
+            chartsContainer.classList.remove('visible');
+            resultsPanel.classList.remove('visible');
+            
+            hiddenInput.disabled = false;
+            typingPanelContainer.classList.add('test-running');
+            hiddenInput.focus();
+            
+            startTestEngine();
+        }
+
+        function rebindDOMCursor() {
+            const totalSpans = wordsStage.querySelectorAll('.letter');
+            const containerOffset = window.innerWidth <= 768 ? 35 : 45;
+            totalSpans.forEach((span, index) => {
+                span.classList.remove('current');
+                if (index === globalCharIndex) {
+                    span.classList.add('current');
+                    let parentWord = span.parentElement;
+                    if (parentWord && parentWord.offsetTop > containerOffset) {
+                        wordsStage.style.top = `-${parentWord.offsetTop - 10}px`;
+                    }
+                }
+            });
+        }
+
+        hiddenInput.addEventListener('keydown', (e) => {
+            if (!isRunning) return;
+            const targetSpans = wordsStage.querySelectorAll('.letter');
+            
+            if (globalCharIndex >= targetSpans.length - 15) {
+                appendDynamicBuffer();
+            }
+
+            if (e.key === 'Backspace') {
+                e.preventDefault();
+                if (globalCharIndex > 0) {
+                    globalCharIndex--;
+                    let historicalState = flatTextArray[globalCharIndex].state;
+                    if (historicalState === 'fail') {
+                        if (incorrectKeystrokes > 0) incorrectKeystrokes--;
+                    }
+                    flatTextArray[globalCharIndex].state = 'neutral';
+                    
+                    targetSpans[globalCharIndex].classList.remove('correct', 'incorrect');
+                    rebindDOMCursor();
+                    hiddenInput.value = '';
+                }
+                return;
+            }
+
+            if (e.key.length === 1 || e.key === ' ') {
+                e.preventDefault();
+                
+                let typedChar = e.key;
+                totalKeystrokes++;
+                let targetSpan = targetSpans[globalCharIndex];
+                if (!targetSpan) return;
+
+                let explicitTargetChar = targetSpan.classList.contains('whitespace') ? ' ' : targetSpan.textContent;
+
+                if (typedChar === explicitTargetChar) {
+                    targetSpan.classList.add('correct');
+                    flatTextArray[globalCharIndex].state = 'pass';
+                } else {
+                    targetSpan.classList.add('incorrect');
+                    flatTextArray[globalCharIndex].state = 'fail';
+                    incorrectKeystrokes++;
+                }
+
+                globalCharIndex++;
+                rebindDOMCursor();
+                
+                let runningAcc = totalKeystrokes > 0 ? Math.max(0, Math.min(100, Math.round(((totalKeystrokes - incorrectKeystrokes) / totalKeystrokes) * 100))) : 100;
+                liveAcc.textContent = `${runningAcc}%`;
+                
+                hiddenInput.value = '';
+            }
+        });
+
+        function startTestEngine() {
+            isRunning = true;
+            btnMasterStart.setAttribute('disabled', 'true');
+            
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                liveTimer.textContent = timeLeft;
+
+                let minutesElapsed = (testDuration - timeLeft) / 60;
+                let validKeys = flatTextArray.filter(charNode => charNode.state === 'pass').length;
+                let dynamicWpm = minutesElapsed > 0 ? Math.round((validKeys / 5) / minutesElapsed) : 0;
+
+                liveWpm.textContent = dynamicWpm;
+                wpmHistory.push(dynamicWpm);
+                
+                if (speedChart && chartsContainer.classList.contains('visible')) {
+                    speedChart.data.labels = Array.from({length: wpmHistory.length}, (_, i) => `${i + 1}s`);
+                    speedChart.data.datasets[0].data = wpmHistory;
+                    speedChart.update('none');
+                }
+
+                if (timeLeft <= 0) {
+                    endTestEngine();
+                }
+            }, 1000);
+        }
+
+        function endTestEngine() {
+            clearInterval(timerInterval);
+            isRunning = false;
+            hiddenInput.disabled = true;
+            btnMasterStart.removeAttribute('disabled');
+            typingPanelContainer.classList.remove('test-running');
+            
+            wordsStage.innerHTML = `<div style="text-align:center; color:var(--main-color); width:100%; font-weight:bold; padding-top:20px;">✓ Test Completed!</div>`;
+            
+            let validKeys = flatTextArray.filter(charNode => charNode.state === 'pass').length;
+            let minutesElapsed = testDuration / 60;
+            let finalWpm = minutesElapsed > 0 ? Math.round((validKeys / 5) / minutesElapsed) : 0;
+            let finalAcc = totalKeystrokes > 0 ? Math.max(0, Math.min(100, Math.round(((totalKeystrokes - incorrectKeystrokes) / totalKeystrokes) * 100))) : 100;
+
+            document.getElementById('final-wpm').textContent = finalWpm;
+            document.getElementById('final-accuracy').textContent = finalAcc + '%';
+            document.getElementById('final-keys').textContent = totalKeystrokes;
+            document.getElementById('final-errors').textContent = incorrectKeystrokes;
+
+            resultsPanel.classList.add('visible');
+            chartsContainer.classList.add('visible');
+
+            updateCharts();
+        }
+
+        function updateCharts() {
+            let correctKeys = totalKeystrokes - incorrectKeystrokes;
+            
+            if (accuracyChart) {
+                accuracyChart.data.datasets[0].data = [correctKeys, incorrectKeystrokes];
+                accuracyChart.update('none');
+            }
+
+            if (speedChart) {
+                speedChart.data.labels = Array.from({length: wpmHistory.length}, (_, i) => `${i + 1}s`);
+                speedChart.data.datasets[0].data = wpmHistory;
+                speedChart.update('none');
+            }
+        }
+
+        function initCharts() {
+            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            const gridColor = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.05)';
+            const fontColor = isDark ? '#7987a1' : '#8e9aa8';
+            const primaryAccent = isDark ? 'rgb(0, 240, 255)' : 'rgb(99, 102, 241)';
+
+            // Speed Chart
+            const speedCtx = document.getElementById('speedChart').getContext('2d');
+            if (speedChart) speedChart.destroy();
+            
+            speedChart = new Chart(speedCtx, {
+                type: 'line',
+                data: {
+                    labels: wpmHistory.length > 0 ? Array.from({length: wpmHistory.length}, (_, i) => `${i + 1}s`) : ['0s'],
+                    datasets: [{
+                        label: 'WPM',
+                        data: wpmHistory.length > 0 ? wpmHistory : [0],
+                        borderColor: primaryAccent,
+                        backgroundColor: 'transparent',
+                        tension: 0.3,
+                        borderWidth: 2,
+                        pointRadius: 3,
+                        pointBackgroundColor: primaryAccent,
+                        pointBorderColor: primaryAccent,
+                        fill: false
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: { color: fontColor, font: { size: 11 } },
+                            grid: { color: gridColor }
+                        },
+                        x: {
+                            ticks: { color: fontColor, font: { size: 10 } },
+                            grid: { color: gridColor }
+                        }
+                    }
+                }
+            });
+
+            // Accuracy Chart
+            const accuracyCtx = document.getElementById('accuracyChart').getContext('2d');
+            if (accuracyChart) accuracyChart.destroy();
+            
+            accuracyChart = new Chart(accuracyCtx, {
+                type: 'pie',
+                data: {
+                    labels: ['Correct Keys', 'Typos'],
+                    datasets: [{
+                        data: [1, 0],
+                        backgroundColor: ['#00ffaa', '#ff3b69'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { color: fontColor, font: { size: 11 }, padding: 15 }
+                        }
+                    }
+                }
+            });
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                clearInterval(timerInterval);
+                isRunning = false;
+                typingPanelContainer.classList.remove('test-running');
+                chartsContainer.classList.remove('visible');
+                resultsPanel.classList.remove('visible');
+                difficultyModal.classList.add('active');
+            }
+        });
+    </script>
+</body>
+</html>
