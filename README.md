@@ -1,6 +1,7 @@
 # Type Dash ⌨️🚀
 
 Type Dash is a modern, responsive, and user-friendly typing speed test application designed to help users improve their typing skills through real-time performance tracking. Whether you're a student, programmer, content writer, or anyone looking to enhance typing efficiency, Type Dash provides an engaging environment to practice and monitor your progress.
+(Desktop Version).
 
 ## 🌟 Overview
 
